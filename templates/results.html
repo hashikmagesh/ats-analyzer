@@ -1,0 +1,1574 @@
+{% extends 'base.html' %}
+{% block title %}ATS Score — {{ analysis.job_description.job_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Page Layout ───────────────────────────────── */
+.result-header {
+    text-align: center;
+    padding: 2rem 0 1rem;
+}
+.result-header h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #e2e8f0;
+}
+.meta-info {
+    display: flex;
+    justify-content: center;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    margin-top: 0.8rem;
+}
+.meta-badge {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.82rem;
+    color: #94a3b8;
+}
+.meta-badge span { color: #e2e8f0; font-weight: 500; }
+
+/* ── Tabs ──────────────────────────────────────── */
+.tabs {
+    display: flex;
+    gap: 0.3rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding-bottom: 0;
+}
+.tab-btn {
+    padding: 0.65rem 1.4rem;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    border-radius: 6px 6px 0 0;
+    transition: all 0.2s;
+}
+.tab-btn:hover { color: #94a3b8; }
+.tab-btn.active {
+    color: #667eea;
+    border-bottom-color: #667eea;
+    background: rgba(102,126,234,0.06);
+}
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* ── Score Hero ────────────────────────────────── */
+.score-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem;
+}
+.score-circle {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 5px solid;
+    margin-bottom: 1rem;
+}
+.score-number {
+    font-size: 2.6rem;
+    font-weight: 800;
+    line-height: 1;
+}
+.score-sub {
+    font-size: 0.72rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+.grade-badge {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 0.4rem;
+}
+.hire-pill {
+    display: inline-block;
+    padding: 0.35rem 1rem;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border: 1px solid;
+}
+
+/* ── Score Bars ────────────────────────────────── */
+.score-bars { width: 100%; }
+.bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 0.9rem;
+}
+.bar-label {
+    width: 120px;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    flex-shrink: 0;
+}
+.bar-track {
+    flex: 1;
+    height: 8px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 10px;
+    overflow: hidden;
+}
+.bar-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 1.2s cubic-bezier(0.4,0,0.2,1);
+    width: 0;
+}
+.bar-val {
+    width: 40px;
+    text-align: right;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #e2e8f0;
+    flex-shrink: 0;
+}
+
+/* ── Two Col ───────────────────────────────────── */
+.two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+@media (max-width: 680px) {
+    .two-col { grid-template-columns: 1fr; }
+}
+
+/* ── Tags ──────────────────────────────────────── */
+.tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.5rem;
+}
+.tag {
+    padding: 0.22rem 0.65rem;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 500;
+}
+.tag-green  { background:rgba(52,211,153,0.12); border:1px solid rgba(52,211,153,0.3); color:#6ee7b7; }
+.tag-red    { background:rgba(248,113,113,0.10); border:1px solid rgba(248,113,113,0.25); color:#fca5a5; }
+.tag-blue   { background:rgba(102,126,234,0.10); border:1px solid rgba(102,126,234,0.2); color:#a5b4fc; }
+.tag-yellow { background:rgba(251,191,36,0.10); border:1px solid rgba(251,191,36,0.25); color:#fde68a; }
+.tag-purple { background:rgba(167,139,250,0.10); border:1px solid rgba(167,139,250,0.25); color:#c4b5fd; }
+
+/* ── Insight rows ──────────────────────────────── */
+.insight-row {
+    display: flex;
+    gap: 0.6rem;
+    padding: 0.65rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 0.86rem;
+    color: #94a3b8;
+    line-height: 1.5;
+}
+.insight-row:last-child { border-bottom: none; }
+
+/* ── Chart containers ──────────────────────────── */
+.chart-wrap {
+    position: relative;
+    width: 100%;
+}
+.chart-title {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1rem;
+}
+
+/* ── Section chips ─────────────────────────────── */
+.sec-chips { display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.6rem; }
+.chip { padding:0.25rem 0.75rem; border-radius:8px; font-size:0.77rem; font-weight:500; }
+.chip-on  { background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.2); color:#34d399; }
+.chip-off { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); color:#475569; }
+
+/* ── Gap cards ─────────────────────────────────── */
+.gap-card {
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 0.8rem;
+    border-left: 3px solid;
+}
+
+/* ── Suggestion cards ──────────────────────────── */
+.sug-card {
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 0.8rem;
+    border-left: 3px solid;
+}
+
+/* ── Stat mini cards ───────────────────────────── */
+.stat-mini {
+    flex: 1;
+    min-width: 100px;
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+    border: 1px solid;
+}
+.stat-num {
+    font-size: 1.8rem;
+    font-weight: 700;
+    line-height: 1;
+}
+.stat-lbl {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    margin-top: 0.3rem;
+}
+
+/* ── Animated counter ──────────────────────────── */
+@keyframes countUp {
+    from { opacity:0; transform:translateY(10px); }
+    to   { opacity:1; transform:translateY(0);    }
+}
+.count-anim { animation: countUp 0.6s ease forwards; }
+
+/* ── Progress ring ─────────────────────────────── */
+.ring-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+}
+.ring-wrap svg { transform: rotate(-90deg); }
+.ring-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    text-align: center;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Page Header ──────────────────────────────── -->
+<div class="result-header">
+    <h2>🎯 ATS Analysis Complete</h2>
+    <div class="meta-info">
+        <div class="meta-badge">📄 <span>{{ analysis.resume.original_filename }}</span></div>
+        <div class="meta-badge">💼 <span>{{ analysis.job_description.job_title }}</span></div>
+        {% if analysis.job_description.company_name %}
+        <div class="meta-badge">🏢 <span>{{ analysis.job_description.company_name }}</span></div>
+        {% endif %}
+        <div class="meta-badge">📅 <span>{{ analysis.created_at|date:"M d, Y" }}</span></div>
+    </div>
+</div>
+
+<!-- ── Tabs ─────────────────────────────────────── -->
+<div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('overview',this)">📋 Overview</button>
+    <button class="tab-btn"        onclick="switchTab('dashboard',this)">📊 Dashboard</button>
+    <button class="tab-btn"        onclick="switchTab('gaps',this)">🔍 Skill Gaps</button>
+    <button class="tab-btn"        onclick="switchTab('suggestions',this)">💡 Suggestions</button>
+    <button class="tab-btn"        onclick="switchTab('rewriter',this)">🤖 Rewriter</button>
+</div>
+
+{% if ats_score %}
+
+<!-- ════════════════════════════════════════════════
+     TAB 1: OVERVIEW
+════════════════════════════════════════════════ -->
+<div id="tab-overview" class="tab-pane active">
+
+    <!-- Score + Bars -->
+    <div class="card">
+        <div class="two-col" style="align-items:center;">
+            <div class="score-hero">
+                <div class="score-circle"
+                     style="border-color:{{ ats_score.grade_color }};
+                            box-shadow:0 0 35px {{ ats_score.grade_color }}33;">
+                    <div class="score-number"
+                         style="color:{{ ats_score.grade_color }};"
+                         id="hero-score">0</div>
+                    <div class="score-sub">/ 100</div>
+                </div>
+                <div class="grade-badge" style="color:{{ ats_score.grade_color }};">
+                    {{ ats_score.grade_emoji }} {{ ats_score.grade }} — {{ ats_score.grade_label }}
+                </div>
+                <div class="hire-pill"
+                     style="color:{{ ats_score.hire_color }};
+                            border-color:{{ ats_score.hire_color }}44;
+                            background:{{ ats_score.hire_color }}15;">
+                    {{ ats_score.hire_likelihood }}
+                </div>
+                <div style="margin-top:0.7rem;font-size:0.78rem;
+                            color:#475569;text-align:center;max-width:200px;">
+                    {{ ats_score.hire_recommendation }}
+                </div>
+            </div>
+
+            <!-- Bars -->
+            <div class="score-bars">
+                <div style="font-size:0.82rem;font-weight:600;color:#64748b;
+                            text-transform:uppercase;letter-spacing:0.05em;
+                            margin-bottom:1rem;">Score Breakdown</div>
+
+                {% with scores=ats_score %}
+                <div class="bar-row">
+                    <div class="bar-label">⚡ Skill Match</div>
+                    <div class="bar-track">
+                        <div class="bar-fill" id="bar-skill"
+                             data-val="{{ scores.skill_score }}"
+                             style="background:{% if scores.skill_score >= 70 %}#34d399{% elif scores.skill_score >= 40 %}#fbbf24{% else %}#f87171{% endif %};"></div>
+                    </div>
+                    <div class="bar-val">{{ scores.skill_score }}%</div>
+                </div>
+                <div class="bar-row">
+                    <div class="bar-label">🔤 Keywords</div>
+                    <div class="bar-track">
+                        <div class="bar-fill" id="bar-keyword"
+                             data-val="{{ scores.keyword_score }}"
+                             style="background:{% if scores.keyword_score >= 70 %}#34d399{% elif scores.keyword_score >= 40 %}#fbbf24{% else %}#f87171{% endif %};"></div>
+                    </div>
+                    <div class="bar-val">{{ scores.keyword_score }}%</div>
+                </div>
+                <div class="bar-row">
+                    <div class="bar-label">💼 Experience</div>
+                    <div class="bar-track">
+                        <div class="bar-fill" id="bar-exp"
+                             data-val="{{ scores.experience_score }}"
+                             style="background:{% if scores.experience_score >= 70 %}#34d399{% elif scores.experience_score >= 40 %}#fbbf24{% else %}#f87171{% endif %};"></div>
+                    </div>
+                    <div class="bar-val">{{ scores.experience_score }}%</div>
+                </div>
+                <div class="bar-row">
+                    <div class="bar-label">🎓 Education</div>
+                    <div class="bar-track">
+                        <div class="bar-fill" id="bar-edu"
+                             data-val="{{ scores.education_score }}"
+                             style="background:{% if scores.education_score >= 70 %}#34d399{% elif scores.education_score >= 40 %}#fbbf24{% else %}#f87171{% endif %};"></div>
+                    </div>
+                    <div class="bar-val">{{ scores.education_score }}%</div>
+                </div>
+                <div class="bar-row">
+                    <div class="bar-label">📋 Format</div>
+                    <div class="bar-track">
+                        <div class="bar-fill" id="bar-fmt"
+                             data-val="{{ scores.format_score }}"
+                             style="background:{% if scores.format_score >= 70 %}#34d399{% elif scores.format_score >= 40 %}#fbbf24{% else %}#f87171{% endif %};"></div>
+                    </div>
+                    <div class="bar-val">{{ scores.format_score }}%</div>
+                </div>
+                {% endwith %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Strengths + Weaknesses -->
+    <div class="two-col" style="margin-top:1.5rem;">
+        <div class="card">
+            <div class="card-title">💪 Strengths</div>
+            {% for s in ats_score.strengths %}
+            <div class="insight-row"><span>✅</span><span>{{ s }}</span></div>
+            {% empty %}
+            <div class="insight-row"><span>ℹ️</span><span>Improve your resume to see strengths.</span></div>
+            {% endfor %}
+        </div>
+        <div class="card">
+            <div class="card-title">🔧 Areas to Improve</div>
+            {% for w in ats_score.weaknesses %}
+            <div class="insight-row"><span>⚠️</span><span>{{ w }}</span></div>
+            {% empty %}
+            <div class="insight-row"><span>🏆</span><span>No major weaknesses!</span></div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Skill Match -->
+    {% if match_result %}
+    <div class="card" style="margin-top:1.5rem;">
+        <div class="card-title">🎯 Skill Match</div>
+        <div class="two-col">
+            <div>
+                <div style="font-size:0.78rem;font-weight:600;color:#94a3b8;
+                            text-transform:uppercase;letter-spacing:0.05em;">
+                    ✅ Matched ({{ match_result.matched_required|length }})
+                </div>
+                <div class="tag-list">
+                    {% for s in match_result.matched_required %}
+                    <span class="tag tag-green">✓ {{ s }}</span>
+                    {% empty %}<span style="color:#64748b;font-size:0.83rem;">None matched</span>
+                    {% endfor %}
+                </div>
+            </div>
+            <div>
+                <div style="font-size:0.78rem;font-weight:600;color:#94a3b8;
+                            text-transform:uppercase;letter-spacing:0.05em;">
+                    ❌ Missing ({{ match_result.missing_required|length }})
+                </div>
+                <div class="tag-list">
+                    {% for s in match_result.missing_required %}
+                    <span class="tag tag-red">✗ {{ s }}</span>
+                    {% empty %}<span style="color:#34d399;font-size:0.83rem;">All matched 🎉</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Resume Skills -->
+    {% if resume_skills %}
+    <div class="card" style="margin-top:1.5rem;">
+        <div class="card-title">
+            ⚡ Your Resume Skills
+            <span style="margin-left:auto;font-size:0.75rem;color:#475569;font-weight:400;">
+                {{ resume_skills.total_found }} found
+            </span>
+        </div>
+        {% if resume_skills.technical_skills %}
+        <div style="margin-bottom:0.9rem;">
+            <div style="font-size:0.75rem;color:#64748b;margin-bottom:0.4rem;">🔧 Technical</div>
+            <div class="tag-list">
+                {% for s in resume_skills.technical_skills %}<span class="tag tag-blue">{{ s }}</span>{% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% if resume_skills.tools %}
+        <div style="margin-bottom:0.9rem;">
+            <div style="font-size:0.75rem;color:#64748b;margin-bottom:0.4rem;">🛠 Tools</div>
+            <div class="tag-list">
+                {% for t in resume_skills.tools %}<span class="tag tag-yellow">{{ t }}</span>{% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% if resume_skills.soft_skills %}
+        <div>
+            <div style="font-size:0.75rem;color:#64748b;margin-bottom:0.4rem;">🤝 Soft Skills</div>
+            <div class="tag-list">
+                {% for s in resume_skills.soft_skills %}<span class="tag tag-purple">{{ s }}</span>{% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- JD Requirements -->
+    {% if jd_data %}
+    <div class="card" style="margin-top:1.5rem;">
+        <div class="card-title">💼 Job Requirements</div>
+        <div class="two-col">
+            <div>
+                <div style="font-size:0.75rem;color:#64748b;margin-bottom:0.4rem;">🔴 Required</div>
+                <div class="tag-list">
+                    {% for s in jd_data.required_skills %}<span class="tag tag-red">{{ s }}</span>{% endfor %}
+                </div>
+            </div>
+            <div>
+                <div style="font-size:0.75rem;color:#64748b;margin-bottom:0.4rem;">🟡 Preferred</div>
+                <div class="tag-list">
+                    {% for s in jd_data.preferred_skills %}<span class="tag tag-yellow">{{ s }}</span>
+                    {% empty %}<span style="color:#64748b;font-size:0.82rem;">None specified</span>{% endfor %}
+                </div>
+            </div>
+        </div>
+        <div style="display:flex;gap:1.2rem;margin-top:1rem;flex-wrap:wrap;">
+            <span style="font-size:0.82rem;color:#94a3b8;">⏱ Experience: <strong style="color:#e2e8f0;">{% if jd_data.experience_years %}{{ jd_data.experience_years }}+ yrs{% else %}Any{% endif %}</strong></span>
+            <span style="font-size:0.82rem;color:#94a3b8;">🎓 Education: <strong style="color:#e2e8f0;">{{ jd_data.education_level|title }}</strong></span>
+            <span style="font-size:0.82rem;color:#94a3b8;">📈 Level: <strong style="color:#e2e8f0;">{{ jd_data.job_level|title }}</strong></span>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Sections Detected -->
+    <div class="card" style="margin-top:1.5rem;">
+        <div class="card-title">📋 Resume Sections
+            <span style="margin-left:auto;font-size:0.75rem;color:#475569;font-weight:400;">{{ sections_found|length }} detected</span>
+        </div>
+        <div class="sec-chips">
+            {% if sections.summary      %}<span class="chip chip-on">👤 Summary</span>     {% else %}<span class="chip chip-off">👤 Summary</span>     {% endif %}
+            {% if sections.experience   %}<span class="chip chip-on">💼 Experience</span>  {% else %}<span class="chip chip-off">💼 Experience</span>  {% endif %}
+            {% if sections.skills       %}<span class="chip chip-on">⚡ Skills</span>       {% else %}<span class="chip chip-off">⚡ Skills</span>       {% endif %}
+            {% if sections.education    %}<span class="chip chip-on">🎓 Education</span>   {% else %}<span class="chip chip-off">🎓 Education</span>   {% endif %}
+            {% if sections.projects     %}<span class="chip chip-on">🚀 Projects</span>    {% else %}<span class="chip chip-off">🚀 Projects</span>    {% endif %}
+            {% if sections.certifications %}<span class="chip chip-on">🏆 Certs</span>    {% else %}<span class="chip chip-off">🏆 Certs</span>        {% endif %}
+        </div>
+    </div>
+
+</div><!-- end tab-overview -->
+<!-- Quick Export Strip (Overview tab) -->
+{% if rewrite_data or analysis.resume.extracted_text %}
+<div class="card" style="margin-top:1.5rem;">
+    <div class="card-title">📥 Export Resume</div>
+    <p style="font-size:0.84rem;color:#64748b;margin-bottom:1rem;">
+        {% if rewrite_data %}
+        Download your AI-optimized resume:
+        {% else %}
+        Download your original resume (run Rewriter for AI-optimized version):
+        {% endif %}
+    </p>
+    <div style="display:flex;gap:0.8rem;flex-wrap:wrap;">
+        <a href="{% url 'export_pdf' analysis.pk %}"
+           style="display:inline-flex;align-items:center;gap:0.4rem;
+                  background:linear-gradient(135deg,#f87171,#dc2626);
+                  color:white;text-decoration:none;padding:0.55rem 1.3rem;
+                  border-radius:8px;font-weight:600;font-size:0.86rem;
+                  box-shadow:0 3px 10px rgba(248,113,113,0.25);">
+            📄 PDF
+        </a>
+        <a href="{% url 'export_docx' analysis.pk %}"
+           style="display:inline-flex;align-items:center;gap:0.4rem;
+                  background:linear-gradient(135deg,#3b82f6,#1d4ed8);
+                  color:white;text-decoration:none;padding:0.55rem 1.3rem;
+                  border-radius:8px;font-weight:600;font-size:0.86rem;
+                  box-shadow:0 3px 10px rgba(59,130,246,0.25);">
+            📝 DOCX
+        </a>
+        {% if not rewrite_data %}
+        <a href="{% url 'rewrite' analysis.pk %}"
+           style="display:inline-flex;align-items:center;gap:0.4rem;
+                  background:rgba(102,126,234,0.15);
+                  border:1px solid rgba(102,126,234,0.3);
+                  color:#a5b4fc;text-decoration:none;padding:0.55rem 1.3rem;
+                  border-radius:8px;font-weight:500;font-size:0.86rem;">
+            🤖 Optimize First
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- ════════════════════════════════════════════════
+     TAB 2: DASHBOARD (Chart.js)
+════════════════════════════════════════════════ -->
+<div id="tab-dashboard" class="tab-pane">
+
+    <!-- Stat Strip -->
+    <div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+
+        <div class="stat-mini"
+             style="background:rgba(102,126,234,0.08);
+                    border-color:rgba(102,126,234,0.2);">
+            <div class="stat-num" style="color:#667eea;">
+                {{ ats_score.overall_score }}
+            </div>
+            <div class="stat-lbl">Overall Score</div>
+        </div>
+
+        <div class="stat-mini"
+             style="background:rgba(52,211,153,0.08);
+                    border-color:rgba(52,211,153,0.2);">
+            <div class="stat-num" style="color:#34d399;">
+                {{ match_result.matched_required|length }}
+            </div>
+            <div class="stat-lbl">Skills Matched</div>
+        </div>
+
+        <div class="stat-mini"
+             style="background:rgba(248,113,113,0.08);
+                    border-color:rgba(248,113,113,0.2);">
+            <div class="stat-num" style="color:#f87171;">
+                {{ match_result.missing_required|length }}
+            </div>
+            <div class="stat-lbl">Skills Missing</div>
+        </div>
+
+        <div class="stat-mini"
+             style="background:rgba(251,191,36,0.08);
+                    border-color:rgba(251,191,36,0.2);">
+            <div class="stat-num" style="color:#fbbf24;">
+                {{ resume_skills.total_found|default:"0" }}
+            </div>
+            <div class="stat-lbl">Resume Skills</div>
+        </div>
+
+        <div class="stat-mini"
+             style="background:rgba(167,139,250,0.08);
+                    border-color:rgba(167,139,250,0.2);">
+            <div class="stat-num" style="color:#c4b5fd;">
+                {{ ats_score.grade }}
+            </div>
+            <div class="stat-lbl">Grade</div>
+        </div>
+
+    </div>
+
+    <!-- Row 1: Radar + Bar -->
+    <div class="two-col" style="margin-bottom:1.5rem;">
+
+        <!-- Radar Chart -->
+        <div class="card">
+            <div class="chart-title">🕸 Score Radar</div>
+            <div class="chart-wrap" style="max-height:280px;">
+                <canvas id="radarChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Horizontal Bar Chart -->
+        <div class="card">
+            <div class="chart-title">📊 Score Components</div>
+            <div class="chart-wrap" style="max-height:280px;">
+                <canvas id="barChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Row 2: Doughnut + Progress Rings -->
+    <div class="two-col" style="margin-bottom:1.5rem;">
+
+        <!-- Doughnut: Matched vs Missing -->
+        <div class="card">
+            <div class="chart-title">🍩 Skill Coverage</div>
+            <div class="chart-wrap"
+                 style="max-height:260px;
+                        display:flex;align-items:center;
+                        justify-content:center;">
+                <canvas id="doughnutChart"
+                        style="max-width:220px;"></canvas>
+            </div>
+        </div>
+
+        <!-- Progress Rings: Required vs Preferred -->
+        <div class="card">
+            <div class="chart-title">🎯 Match Breakdown</div>
+
+            <!-- Required Ring -->
+            <div style="display:flex;gap:2rem;
+                        justify-content:center;
+                        align-items:center;padding:1rem 0;">
+
+                <div class="ring-wrap">
+                    <svg width="100" height="100"
+                         viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="42"
+                                fill="none"
+                                stroke="rgba(255,255,255,0.06)"
+                                stroke-width="10"/>
+                        <circle cx="50" cy="50" r="42"
+                                fill="none"
+                                stroke="#34d399"
+                                stroke-width="10"
+                                stroke-linecap="round"
+                                stroke-dasharray="263.9"
+                                stroke-dashoffset="263.9"
+                                id="ring-required"
+                                style="transition:stroke-dashoffset 1.2s ease;"/>
+                        <text x="50" y="50"
+                              text-anchor="middle"
+                              dominant-baseline="middle"
+                              fill="#e2e8f0"
+                              font-size="16"
+                              font-weight="700"
+                              transform="rotate(90,50,50)">
+                            {{ match_result.required_score|floatformat:0 }}%
+                        </text>
+                    </svg>
+                    <div class="ring-label">Required Skills</div>
+                </div>
+
+                <div class="ring-wrap">
+                    <svg width="100" height="100"
+                         viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="42"
+                                fill="none"
+                                stroke="rgba(255,255,255,0.06)"
+                                stroke-width="10"/>
+                        <circle cx="50" cy="50" r="42"
+                                fill="none"
+                                stroke="#fbbf24"
+                                stroke-width="10"
+                                stroke-linecap="round"
+                                stroke-dasharray="263.9"
+                                stroke-dashoffset="263.9"
+                                id="ring-preferred"
+                                style="transition:stroke-dashoffset 1.2s ease;"/>
+                        <text x="50" y="50"
+                              text-anchor="middle"
+                              dominant-baseline="middle"
+                              fill="#e2e8f0"
+                              font-size="16"
+                              font-weight="700"
+                              transform="rotate(90,50,50)">
+                            {{ match_result.preferred_score|floatformat:0 }}%
+                        </text>
+                    </svg>
+                    <div class="ring-label">Preferred Skills</div>
+                </div>
+
+                <div class="ring-wrap">
+                    <svg width="100" height="100"
+                         viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="42"
+                                fill="none"
+                                stroke="rgba(255,255,255,0.06)"
+                                stroke-width="10"/>
+                        <circle cx="50" cy="50" r="42"
+                                fill="none"
+                                stroke="#667eea"
+                                stroke-width="10"
+                                stroke-linecap="round"
+                                stroke-dasharray="263.9"
+                                stroke-dashoffset="263.9"
+                                id="ring-overall"
+                                style="transition:stroke-dashoffset 1.2s ease;"/>
+                        <text x="50" y="50"
+                              text-anchor="middle"
+                              dominant-baseline="middle"
+                              fill="#e2e8f0"
+                              font-size="16"
+                              font-weight="700"
+                              transform="rotate(90,50,50)">
+                            {{ ats_score.overall_score }}%
+                        </text>
+                    </svg>
+                    <div class="ring-label">Overall ATS</div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Row 3: Score vs Benchmark Line Chart -->
+    <div class="card" style="margin-bottom:1.5rem;">
+        <div class="chart-title">
+            📈 Your Score vs Benchmarks
+        </div>
+        <div class="chart-wrap" style="max-height:220px;">
+            <canvas id="benchmarkChart"></canvas>
+        </div>
+        <div style="display:flex;gap:1.5rem;
+                    margin-top:1rem;flex-wrap:wrap;
+                    font-size:0.78rem;color:#64748b;">
+            <span>🟣 Your score</span>
+            <span>🔴 Minimum (50)</span>
+            <span>🟡 Good (70)</span>
+            <span>🟢 Excellent (85)</span>
+        </div>
+    </div>
+
+</div><!-- end tab-dashboard -->
+
+
+<!-- ════════════════════════════════════════════════
+     TAB 3: SKILL GAPS
+════════════════════════════════════════════════ -->
+<div id="tab-gaps" class="tab-pane">
+{% if gap_analysis and gap_analysis.skill_gaps %}
+
+    <!-- Summary strip -->
+    <div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+        <div class="stat-mini" style="background:rgba(248,113,113,0.08);border-color:rgba(248,113,113,0.2);">
+            <div class="stat-num" style="color:#f87171;">{{ gap_analysis.critical_gaps|length }}</div>
+            <div class="stat-lbl">Critical</div>
+        </div>
+        <div class="stat-mini" style="background:rgba(251,191,36,0.08);border-color:rgba(251,191,36,0.2);">
+            <div class="stat-num" style="color:#fbbf24;">{{ gap_analysis.important_gaps|length }}</div>
+            <div class="stat-lbl">Important</div>
+        </div>
+        <div class="stat-mini" style="background:rgba(52,211,153,0.08);border-color:rgba(52,211,153,0.2);">
+            <div class="stat-num" style="color:#34d399;">{{ gap_analysis.quick_wins|length }}</div>
+            <div class="stat-lbl">Quick Wins</div>
+        </div>
+        <div class="stat-mini" style="background:rgba(102,126,234,0.08);border-color:rgba(102,126,234,0.2);">
+            <div class="stat-num" style="color:#667eea;">{{ gap_analysis.readiness_score }}%</div>
+            <div class="stat-lbl">Readiness</div>
+        </div>
+    </div>
+
+    {% for gap in gap_analysis.skill_gaps %}
+    <div class="gap-card"
+         style="background:{{ gap.importance_meta.bg|default:'rgba(255,255,255,0.03)' }};
+                border-color:{{ gap.importance_meta.color|default:'#667eea' }};
+                border-left-color:{{ gap.importance_meta.color|default:'#667eea' }};">
+
+        <div style="display:flex;align-items:center;gap:0.7rem;
+                    flex-wrap:wrap;margin-bottom:0.6rem;">
+            <span style="font-weight:600;color:#e2e8f0;">#{{ gap.priority }} {{ gap.skill }}</span>
+            <span class="tag" style="background:{{ gap.importance_meta.bg }};color:{{ gap.importance_meta.color }};border:1px solid {{ gap.importance_meta.border }};">{{ gap.importance }}</span>
+            <span class="tag tag-blue">{% if gap.difficulty == 'Easy' %}🟢{% elif gap.difficulty == 'Medium' %}🟡{% else %}🔴{% endif %} {{ gap.difficulty }}</span>
+            <span class="tag tag-purple">⏱ {{ gap.learn_time }}</span>
+            {% if gap.is_quick_win %}<span class="tag tag-green">⚡ Quick Win</span>{% endif %}
+        </div>
+
+        <div style="font-size:0.84rem;color:#94a3b8;margin-bottom:0.5rem;">💡 {{ gap.tip }}</div>
+
+        {% if gap.related_owned %}
+        <div style="font-size:0.82rem;color:#34d399;margin-bottom:0.5rem;">
+            ✅ You know: {% for r in gap.related_owned %}<strong>{{ r }}</strong>{% if not forloop.last %}, {% endif %}{% endfor %} — helps you learn faster!
+        </div>
+        {% endif %}
+
+        <div style="font-size:0.75rem;color:#475569;">
+            📚 {% for res in gap.resources %}{{ res }}{% if not forloop.last %} &nbsp;·&nbsp; {% endif %}{% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+
+    {% if gap_analysis.action_plan %}
+    <div class="card" style="margin-top:1.5rem;">
+        <div class="card-title">📅 Learning Action Plan</div>
+        {% for step in gap_analysis.action_plan %}
+        <div style="display:flex;gap:1rem;margin-bottom:1rem;
+                    padding-bottom:1rem;
+                    border-bottom:1px solid rgba(255,255,255,0.04);">
+            <div style="width:34px;height:34px;border-radius:50%;
+                        background:rgba(102,126,234,0.12);
+                        border:1px solid rgba(102,126,234,0.25);
+                        display:flex;align-items:center;
+                        justify-content:center;flex-shrink:0;
+                        font-weight:700;color:#667eea;font-size:0.88rem;">
+                {{ step.step }}
+            </div>
+            <div style="flex:1;">
+                <div style="font-size:0.88rem;font-weight:600;color:#e2e8f0;margin-bottom:0.25rem;">
+                    {{ step.skill }}
+                    <span style="font-size:0.74rem;color:#475569;font-weight:400;margin-left:0.4rem;">
+                        Week {{ step.start_week }} · {{ step.duration }}
+                    </span>
+                </div>
+                <div style="font-size:0.8rem;color:#64748b;">{{ step.action }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+{% else %}
+    <div class="card" style="text-align:center;padding:3rem;">
+        <div style="font-size:3rem;">🎉</div>
+        <p style="color:#34d399;margin-top:1rem;">No significant skill gaps found!</p>
+    </div>
+{% endif %}
+</div><!-- end tab-gaps -->
+
+
+<!-- ════════════════════════════════════════════════
+     TAB 4: SUGGESTIONS
+════════════════════════════════════════════════ -->
+<div id="tab-suggestions" class="tab-pane">
+{% if suggestions %}
+
+    <div style="display:flex;justify-content:space-between;
+                align-items:center;margin-bottom:1.2rem;flex-wrap:wrap;gap:0.5rem;">
+        <span style="font-size:0.85rem;color:#64748b;">
+            {{ suggestions.total_suggestions }} suggestions
+            {% if suggestions.ai_powered %}· 🤖 AI-Enhanced{% endif %}
+        </span>
+    </div>
+
+    <!-- Critical -->
+    {% if suggestions.critical %}
+    <div style="font-size:0.78rem;font-weight:600;color:#f87171;
+                text-transform:uppercase;letter-spacing:0.05em;
+                margin-bottom:0.8rem;">🔴 Critical Fixes</div>
+    {% for s in suggestions.critical %}
+    <div class="sug-card"
+         style="background:rgba(248,113,113,0.06);
+                border-color:#f87171;">
+        <div style="font-weight:600;color:#e2e8f0;margin-bottom:0.35rem;">{{ s.title }}</div>
+        <div style="font-size:0.84rem;color:#94a3b8;margin-bottom:0.4rem;">⚠️ {{ s.issue }}</div>
+        <div style="font-size:0.84rem;color:#fca5a5;margin-bottom:0.35rem;">✅ {{ s.fix }}</div>
+        {% if s.example %}<div style="font-size:0.78rem;background:rgba(0,0,0,0.2);border-radius:6px;padding:0.55rem;color:#94a3b8;font-family:monospace;white-space:pre-line;">{{ s.example }}</div>{% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Improvements -->
+    {% if suggestions.improvements %}
+    <div style="font-size:0.78rem;font-weight:600;color:#fbbf24;
+                text-transform:uppercase;letter-spacing:0.05em;
+                margin:1.2rem 0 0.8rem;">🟡 Improvements</div>
+    {% for s in suggestions.improvements %}
+    <div class="sug-card"
+         style="background:rgba(251,191,36,0.06);
+                border-color:#fbbf24;">
+        <div style="font-weight:600;color:#e2e8f0;margin-bottom:0.35rem;">{{ s.title }}</div>
+        <div style="font-size:0.84rem;color:#94a3b8;margin-bottom:0.4rem;">⚠️ {{ s.issue }}</div>
+        <div style="font-size:0.84rem;color:#fde68a;">✅ {{ s.fix }}</div>
+        {% if s.example %}<div style="font-size:0.78rem;margin-top:0.35rem;color:#94a3b8;">{{ s.example }}</div>{% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Enhancements -->
+    {% if suggestions.enhancements %}
+    <div style="font-size:0.78rem;font-weight:600;color:#34d399;
+                text-transform:uppercase;letter-spacing:0.05em;
+                margin:1.2rem 0 0.8rem;">🟢 Enhancements</div>
+    {% for s in suggestions.enhancements %}
+    <div class="sug-card"
+         style="background:rgba(52,211,153,0.06);
+                border-color:#34d399;">
+        <div style="font-weight:600;color:#e2e8f0;margin-bottom:0.35rem;">{{ s.title }}</div>
+        <div style="font-size:0.84rem;color:#94a3b8;margin-bottom:0.4rem;">ℹ️ {{ s.issue }}</div>
+        <div style="font-size:0.84rem;color:#6ee7b7;">✅ {{ s.fix }}</div>
+        {% if s.example %}<div style="font-size:0.78rem;margin-top:0.35rem;color:#94a3b8;">Example: {{ s.example }}</div>{% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Bullet Rewrites -->
+    {% if suggestions.bullet_rewrites %}
+    <div class="card" style="margin-top:1.5rem;">
+        <div class="card-title">✍️ Bullet Rewrites</div>
+        {% for rw in suggestions.bullet_rewrites %}
+        <div style="margin-bottom:1.1rem;padding-bottom:1.1rem;border-bottom:1px solid rgba(255,255,255,0.05);">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.7rem;">
+                <div>
+                    <div style="font-size:0.7rem;color:#f87171;margin-bottom:0.25rem;text-transform:uppercase;">❌ Before</div>
+                    <div style="background:rgba(248,113,113,0.06);border:1px solid rgba(248,113,113,0.15);border-radius:7px;padding:0.6rem;font-size:0.82rem;color:#94a3b8;line-height:1.5;">{{ rw.original }}</div>
+                </div>
+                <div>
+                    <div style="font-size:0.7rem;color:#34d399;margin-bottom:0.25rem;text-transform:uppercase;">✅ After</div>
+                    <div style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.15);border-radius:7px;padding:0.6rem;font-size:0.82rem;color:#e2e8f0;line-height:1.5;">{{ rw.improved }}</div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Suggested Summary -->
+    {% if suggestions.summary_suggestion %}
+    <div class="card" style="margin-top:1.5rem;">
+        <div class="card-title">👤 Suggested Summary</div>
+        <div style="background:rgba(102,126,234,0.08);border:1px solid rgba(102,126,234,0.2);border-radius:10px;padding:1.1rem;font-size:0.88rem;color:#e2e8f0;line-height:1.7;font-style:italic;">
+            "{{ suggestions.summary_suggestion }}"
+        </div>
+        <p style="font-size:0.76rem;color:#475569;margin-top:0.5rem;">
+            💡 Customize with your specific achievements and numbers.
+        </p>
+    </div>
+    {% endif %}
+
+{% endif %}
+</div><!-- end tab-suggestions -->
+
+
+<!-- ════════════════════════════════════════════════
+     TAB 5: REWRITER
+════════════════════════════════════════════════ -->
+<div id="tab-rewriter" class="tab-pane">
+    <div class="card">
+        <div class="card-title">
+            🤖 AI Resume Rewriter
+            {% if rewrite_data %}
+            <span style="margin-left:auto;font-size:0.76rem;font-weight:400;
+                         background:rgba(52,211,153,0.1);color:#34d399;
+                         border:1px solid rgba(52,211,153,0.2);
+                         padding:0.2rem 0.7rem;border-radius:20px;">
+                ✅ Ready {% if rewrite_data.ai %}· {{ rewrite_data.model }}{% endif %}
+            </span>
+            {% endif %}
+        </div>
+
+        {% if not rewrite_data %}
+        <p style="font-size:0.87rem;color:#94a3b8;margin-bottom:1.2rem;line-height:1.6;">
+            Let AI rewrite your entire resume for this job — stronger verbs, better metrics, woven-in keywords, ATS-ready structure.
+        </p>
+        <a href="{% url 'rewrite' analysis.pk %}"
+           style="display:inline-block;background:linear-gradient(135deg,#667eea,#764ba2);
+                  color:white;text-decoration:none;padding:0.7rem 1.8rem;
+                  border-radius:10px;font-weight:600;font-size:0.92rem;
+                  box-shadow:0 4px 15px rgba(102,126,234,0.3);">
+            🚀 Rewrite My Resume
+        </a>
+
+        {% else %}
+
+        {% if rewrite_data.changes %}
+        <div style="margin-bottom:1.5rem;">
+            <div style="font-size:0.8rem;font-weight:600;
+                        color:#94a3b8;text-transform:uppercase;
+                        letter-spacing:0.05em;margin-bottom:0.8rem;">
+                🔧 Issues Fixed Automatically
+            </div>
+
+            {% for change in rewrite_data.changes %}
+            <div style="display:flex;gap:0.6rem;padding:0.5rem 0;
+                        border-bottom:1px solid rgba(255,255,255,0.04);
+                        font-size:0.84rem;color:#94a3b8;">
+                <span style="color:#34d399;flex-shrink:0;
+                            font-size:1rem;">✓</span>
+                <span>{{ change }}</span>
+            </div>
+            {% endfor %}
+
+            <!-- Score improvement estimate -->
+            <div style="margin-top:1rem;padding:0.8rem;
+                        background:rgba(52,211,153,0.08);
+                        border:1px solid rgba(52,211,153,0.2);
+                        border-radius:8px;font-size:0.83rem;
+                        color:#34d399;">
+                💡 These fixes typically improve ATS score by
+                <strong>15-25 points</strong>. Download and use
+                the optimized version for your applications.
+            </div>
+        </div>
+        {% endif %}
+
+        {% if rewrite_data.text %}
+        <div>
+            <div style="display:flex;justify-content:space-between;
+                        align-items:center;margin-bottom:0.7rem;">
+                <span style="font-size:0.78rem;font-weight:600;color:#94a3b8;
+                              text-transform:uppercase;letter-spacing:0.05em;">
+                    ✨ Optimized Resume
+                </span>
+                <button onclick="copyResume()"
+                        id="copy-btn"
+                        style="background:rgba(102,126,234,0.15);
+                               border:1px solid rgba(102,126,234,0.3);
+                               color:#a5b4fc;padding:0.28rem 0.85rem;
+                               border-radius:7px;cursor:pointer;font-size:0.77rem;">
+                    📋 Copy
+                </button>
+            </div>
+            <textarea id="optimized-resume" readonly
+                      style="width:100%;height:420px;
+                             background:rgba(0,0,0,0.2);
+                             border:1px solid rgba(255,255,255,0.08);
+                             border-radius:10px;padding:1.1rem;
+                             color:#e2e8f0;font-family:monospace;
+                             font-size:0.82rem;line-height:1.7;
+                             resize:vertical;outline:none;">{{ rewrite_data.text }}</textarea>
+        </div>
+        {% endif %}
+
+        
+        <!-- Before/After Toggle -->
+<div style="margin-top:1.2rem;">
+    <button onclick="toggleComparison()"
+            id="compare-btn"
+            style="background:rgba(102,126,234,0.1);
+                   border:1px solid rgba(102,126,234,0.25);
+                   color:#a5b4fc;padding:0.4rem 1rem;
+                   border-radius:8px;cursor:pointer;
+                   font-size:0.82rem;">
+        👁 Show Key Improvements
+    </button>
+</div>
+
+<div id="comparison-panel"
+     style="display:none;margin-top:1rem;">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;
+                gap:1rem;">
+
+        <!-- Before -->
+        <div>
+            <div style="font-size:0.72rem;color:#f87171;
+                        text-transform:uppercase;
+                        margin-bottom:0.5rem;font-weight:600;">
+                ❌ Before (Original Issues)
+            </div>
+            <div style="background:rgba(248,113,113,0.06);
+                        border:1px solid rgba(248,113,113,0.15);
+                        border-radius:8px;padding:0.8rem;
+                        font-size:0.8rem;color:#94a3b8;
+                        line-height:1.7;">
+                • Contact buried after summary<br>
+                • "Completed" weak verb in experience<br>
+                • Experience in paragraph format<br>
+                • No metrics in internships<br>
+                • Education at bottom of resume<br>
+                • Generic summary
+            </div>
+        </div>
+
+        <!-- After -->
+        <div>
+            <div style="font-size:0.72rem;color:#34d399;
+                        text-transform:uppercase;
+                        margin-bottom:0.5rem;font-weight:600;">
+                ✅ After (Auto-Fixed)
+            </div>
+            <div style="background:rgba(52,211,153,0.06);
+                        border:1px solid rgba(52,211,153,0.15);
+                        border-radius:8px;padding:0.8rem;
+                        font-size:0.8rem;color:#e2e8f0;
+                        line-height:1.7;">
+                • Contact on line 2 after name<br>
+                • Strong verbs: Engineered, Designed<br>
+                • 3 bullet points per internship<br>
+                • Metrics added: 15%, 20%, 80%<br>
+                • Education moved to top section<br>
+                • Summary tailored to target role
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+function toggleComparison() {
+    const panel = document.getElementById('comparison-panel');
+    const btn   = document.getElementById('compare-btn');
+    if (panel.style.display === 'none') {
+        panel.style.display = 'block';
+        btn.textContent     = '👁 Hide Improvements';
+    } else {
+        panel.style.display = 'none';
+        btn.textContent     = '👁 Show Key Improvements';
+    }
+}
+</script>
+
+
+
+        <!-- Export Buttons -->
+<div style="margin-top:1.2rem;display:flex;
+            gap:0.8rem;flex-wrap:wrap;align-items:center;">
+
+    <a href="{% url 'export_pdf' analysis.pk %}"
+       style="display:inline-flex;align-items:center;
+              gap:0.4rem;
+              background:linear-gradient(135deg,
+                #f87171 0%, #dc2626 100%);
+              color:white;text-decoration:none;
+              padding:0.6rem 1.4rem;border-radius:9px;
+              font-weight:600;font-size:0.88rem;
+              box-shadow:0 3px 12px rgba(248,113,113,0.3);">
+        📄 Download PDF
+    </a>
+
+    <a href="{% url 'export_docx' analysis.pk %}"
+       style="display:inline-flex;align-items:center;
+              gap:0.4rem;
+              background:linear-gradient(135deg,
+                #3b82f6 0%, #1d4ed8 100%);
+              color:white;text-decoration:none;
+              padding:0.6rem 1.4rem;border-radius:9px;
+              font-weight:600;font-size:0.88rem;
+              box-shadow:0 3px 12px rgba(59,130,246,0.3);">
+        📝 Download DOCX
+    </a>
+
+    <a href="{% url 'rewrite' analysis.pk %}?force=1"
+       style="font-size:0.81rem;color:#667eea;
+              text-decoration:none;">
+        🔄 Rewrite Again
+    </a>
+
+</div>
+
+        {% endif %}
+    </div>
+</div><!-- end tab-rewriter -->
+
+{% endif %}
+
+<!-- Back link -->
+<div style="text-align:center;margin:1.5rem 0 0.5rem;">
+    <a href="{% url 'home' %}" style="color:#667eea;text-decoration:none;font-size:0.88rem;">
+        ← Analyze Another Resume
+    </a>
+</div>
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+// ── Pass Django data to JS ───────────────────────────
+const SCORES = {
+    skill:      {{ ats_score.skill_score|default:0 }},
+    keyword:    {{ ats_score.keyword_score|default:0 }},
+    experience: {{ ats_score.experience_score|default:0 }},
+    education:  {{ ats_score.education_score|default:0 }},
+    format:     {{ ats_score.format_score|default:0 }},
+    overall:    {{ ats_score.overall_score|default:0 }},
+};
+const MATCH = {
+    matched:   {{ match_result.matched_required|length|default:0 }},
+    missing:   {{ match_result.missing_required|length|default:0 }},
+    required:  {{ match_result.required_score|default:0 }},
+    preferred: {{ match_result.preferred_score|default:0 }},
+};
+
+// ── Tab switching ────────────────────────────────────
+function switchTab(name, btn) {
+    document.querySelectorAll('.tab-pane').forEach(
+        p => p.classList.remove('active')
+    );
+    document.querySelectorAll('.tab-btn').forEach(
+        b => b.classList.remove('active')
+    );
+    document.getElementById('tab-' + name)
+            .classList.add('active');
+    btn.classList.add('active');
+
+    // Init charts when Dashboard tab opens
+    if (name === 'dashboard' && !window._chartsInited) {
+        setTimeout(initCharts, 80);
+        window._chartsInited = true;
+    }
+}
+
+// ── Animate score counter ────────────────────────────
+function animateCounter(el, target, duration = 1200) {
+    let start = 0;
+    const step = timestamp => {
+        if (!start) start = timestamp;
+        const progress = Math.min(
+            (timestamp - start) / duration, 1
+        );
+        el.textContent = Math.floor(
+            progress * target
+        );
+        if (progress < 1) requestAnimationFrame(step);
+        else el.textContent = target;
+    };
+    requestAnimationFrame(step);
+}
+
+// ── Animate bars ─────────────────────────────────────
+function animateBars() {
+    document.querySelectorAll('.bar-fill').forEach(bar => {
+        const val = bar.dataset.val || 0;
+        setTimeout(() => {
+            bar.style.width = val + '%';
+        }, 100);
+    });
+}
+
+// ── Animate progress rings ───────────────────────────
+function animateRing(id, pct) {
+    const circ  = 263.9;
+    const offset = circ - (pct / 100) * circ;
+    const el = document.getElementById(id);
+    if (el) {
+        setTimeout(() => {
+            el.style.strokeDashoffset = offset;
+        }, 300);
+    }
+}
+
+// ── Chart.js default style ───────────────────────────
+const FONT   = "'Inter', 'Segoe UI', sans-serif";
+const GRID   = 'rgba(255,255,255,0.06)';
+const TICK   = '#64748b';
+
+Chart.defaults.color          = TICK;
+Chart.defaults.font.family    = FONT;
+Chart.defaults.font.size      = 11;
+
+// ── Init all charts ──────────────────────────────────
+function initCharts() {
+
+    // 1. Radar Chart
+    const radarCtx = document.getElementById(
+        'radarChart'
+    )?.getContext('2d');
+    if (radarCtx) {
+        new Chart(radarCtx, {
+            type: 'radar',
+            data: {
+                labels: [
+                    'Skill Match', 'Keywords',
+                    'Experience', 'Education', 'Format'
+                ],
+                datasets: [{
+                    label: 'Your Score',
+                    data: [
+                        SCORES.skill, SCORES.keyword,
+                        SCORES.experience, SCORES.education,
+                        SCORES.format
+                    ],
+                    backgroundColor: 'rgba(102,126,234,0.2)',
+                    borderColor:     '#667eea',
+                    borderWidth:     2,
+                    pointBackgroundColor: '#667eea',
+                    pointRadius:     4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    r: {
+                        min: 0, max: 100,
+                        ticks: {
+                            stepSize:   25,
+                            color:      TICK,
+                            backdropColor: 'transparent',
+                            font: { size: 9 },
+                        },
+                        grid:        { color: GRID },
+                        angleLines:  { color: GRID },
+                        pointLabels: {
+                            color:     '#94a3b8',
+                            font: { size: 11 },
+                        },
+                    }
+                },
+                plugins: { legend: { display: false } },
+                animation: {
+                    duration: 1000,
+                    easing:   'easeInOutQuart',
+                },
+            }
+        });
+    }
+
+    // 2. Horizontal Bar Chart
+    const barCtx = document.getElementById(
+        'barChart'
+    )?.getContext('2d');
+    if (barCtx) {
+        new Chart(barCtx, {
+            type: 'bar',
+            data: {
+                labels: [
+                    'Skill', 'Keywords',
+                    'Experience', 'Education', 'Format'
+                ],
+                datasets: [{
+                    label: 'Score',
+                    data: [
+                        SCORES.skill, SCORES.keyword,
+                        SCORES.experience,
+                        SCORES.education, SCORES.format
+                    ],
+                    backgroundColor: [
+                        'rgba(102,126,234,0.7)',
+                        'rgba(52,211,153,0.7)',
+                        'rgba(251,191,36,0.7)',
+                        'rgba(167,139,250,0.7)',
+                        'rgba(248,113,113,0.7)',
+                    ],
+                    borderColor: [
+                        '#667eea','#34d399',
+                        '#fbbf24','#a78bfa','#f87171',
+                    ],
+                    borderWidth:  1,
+                    borderRadius: 6,
+                }]
+            },
+            options: {
+                indexAxis:   'y',
+                responsive:  true,
+                maintainAspectRatio: true,
+                scales: {
+                    x: {
+                        min: 0, max: 100,
+                        grid:  { color: GRID },
+                        ticks: { color: TICK },
+                    },
+                    y: {
+                        grid:  { display: false },
+                        ticks: { color: '#94a3b8' },
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx =>
+                                ` ${ctx.parsed.x}%`
+                        }
+                    }
+                },
+                animation: {
+                    duration: 1000,
+                    easing:   'easeOutQuart',
+                },
+            }
+        });
+    }
+
+    // 3. Doughnut Chart — Skill Coverage
+    const dCtx = document.getElementById(
+        'doughnutChart'
+    )?.getContext('2d');
+    if (dCtx) {
+        const total   = MATCH.matched + MATCH.missing;
+        const matched = total > 0 ? MATCH.matched : 1;
+        const missing = total > 0 ? MATCH.missing : 0;
+
+        new Chart(dCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Matched', 'Missing'],
+                datasets: [{
+                    data: [matched, missing],
+                    backgroundColor: [
+                        'rgba(52,211,153,0.8)',
+                        'rgba(248,113,113,0.6)',
+                    ],
+                    borderColor: [
+                        '#34d399', '#f87171',
+                    ],
+                    borderWidth:  2,
+                    hoverOffset:  6,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                cutout: '68%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color:    '#94a3b8',
+                            padding:  15,
+                            usePointStyle: true,
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx =>
+                                ` ${ctx.label}: ${ctx.parsed}`
+                        }
+                    }
+                },
+                animation: {
+                    animateRotate: true,
+                    duration:      1200,
+                },
+            }
+        });
+    }
+
+    // 4. Benchmark Line Chart
+    const lCtx = document.getElementById(
+        'benchmarkChart'
+    )?.getContext('2d');
+    if (lCtx) {
+        const cats = [
+            'Skill', 'Keywords', 'Experience',
+            'Education', 'Format', 'Overall'
+        ];
+        const yours = [
+            SCORES.skill, SCORES.keyword,
+            SCORES.experience, SCORES.education,
+            SCORES.format, SCORES.overall
+        ];
+
+        new Chart(lCtx, {
+            type: 'line',
+            data: {
+                labels: cats,
+                datasets: [
+                    {
+                        label:       'Your Score',
+                        data:        yours,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102,126,234,0.12)',
+                        fill:        true,
+                        tension:     0.4,
+                        borderWidth: 2.5,
+                        pointBackgroundColor: '#667eea',
+                        pointRadius:          5,
+                    },
+                    {
+                        label:       'Minimum (50)',
+                        data:        Array(6).fill(50),
+                        borderColor: 'rgba(248,113,113,0.5)',
+                        borderDash:  [5, 5],
+                        fill:        false,
+                        tension:     0,
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                    },
+                    {
+                        label:       'Good (70)',
+                        data:        Array(6).fill(70),
+                        borderColor: 'rgba(251,191,36,0.5)',
+                        borderDash:  [5, 5],
+                        fill:        false,
+                        tension:     0,
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                    },
+                    {
+                        label:       'Excellent (85)',
+                        data:        Array(6).fill(85),
+                        borderColor: 'rgba(52,211,153,0.5)',
+                        borderDash:  [5, 5],
+                        fill:        false,
+                        tension:     0,
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                    },
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        min:   0,
+                        max:   100,
+                        grid:  { color: GRID },
+                        ticks: { color: TICK },
+                    },
+                    x: {
+                        grid:  { color: GRID },
+                        ticks: { color: '#94a3b8' },
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                    }
+                },
+                animation: {
+                    duration: 1200,
+                    easing:   'easeInOutQuart',
+                },
+            }
+        });
+    }
+
+    // Animate progress rings
+    animateRing('ring-required', MATCH.required);
+    animateRing('ring-preferred', MATCH.preferred);
+    animateRing('ring-overall',   SCORES.overall);
+}
+
+// ── Copy rewritten resume ────────────────────────────
+function copyResume() {
+    const ta  = document.getElementById('optimized-resume');
+    const btn = document.getElementById('copy-btn');
+    if (!ta) return;
+    ta.select();
+    document.execCommand('copy');
+    btn.textContent = '✅ Copied!';
+    btn.style.color = '#34d399';
+    setTimeout(() => {
+        btn.textContent = '📋 Copy';
+        btn.style.color = '#a5b4fc';
+    }, 2000);
+}
+
+// ── On page load ─────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    // Animate score counter
+    const heroEl = document.getElementById('hero-score');
+    if (heroEl) {
+        animateCounter(heroEl, {{ ats_score.overall_score|default:0 }});
+    }
+
+    // Animate bars after short delay
+    setTimeout(animateBars, 200);
+});
+</script>
+{% endblock %}

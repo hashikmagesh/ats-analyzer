@@ -1,0 +1,19 @@
+@"
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.sqlite3
+media/
+staticfiles/
+.env
+.env.*
+.cache/
+*.dll
+*.bin
+*.pt
+*.pth
+.vscode/
+test_output.pdf
+test_output.docx
+"@ | Out-File -FilePath .gitignore -Encoding utf8
